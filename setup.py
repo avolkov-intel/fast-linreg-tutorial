@@ -25,7 +25,7 @@ pybind11_ext = Extension(
     ],
     libraries=openblas_libs,
     library_dirs=openblas_library_dirs,
-    extra_compile_args=["-O3"],
+    extra_compile_args=extra_compile_args,
     language="c++"
 )
 
@@ -37,7 +37,7 @@ cython_exts = cythonize([
         include_dirs=[
             numpy.get_include()
         ],
-        extra_compile_args=["-O3"],
+        extra_compile_args=extra_compile_args,
         language="c++"
     )
 ])
