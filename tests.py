@@ -1,4 +1,4 @@
-from utils_cython import compute_xtx_xty as compute_xtx_xty_cython
+from utils_cython import compute_xtx_xty as compute_xtx_xty_cython, compute_xtx_xty_cython_scipy
 from utils_pybind import compute_xtx_xty as compute_xtx_xty_pybind
 from utils import compute_xtx_xty_baseline, compute_xtx_xty_numpy, generate_data, benchmark, linear_regression, linear_regression_gth
 from time import time
@@ -12,6 +12,7 @@ def check_all(X, y):
     #xtx_baseline, xty_baseline = compute_xtx_xty_baseline(X, y)
     xtx_numpy, xty_numpy = compute_xtx_xty_numpy(X, y)
     xtx_cython, xty_cython = compute_xtx_xty_cython(X, y)
+    xtx_cython_scipy, xty_cython_scipy = compute_xtx_xty_cython_scipy(X, y)
     xtx_pybind, xty_pybind = compute_xtx_xty_pybind(X, y, False)
     xtx_pybind_openbals, xty_pybind_openblas = compute_xtx_xty_pybind(X, y, True)
 
@@ -22,6 +23,8 @@ def check_all(X, y):
     assert np.allclose(xty_gth, xty_numpy), "Numpy xty mismatch"
     assert np.allclose(xtx_gth, xtx_cython), "Cython xtx mismatch"
     assert np.allclose(xty_gth, xty_cython), "Cython xty mismatch"
+    assert np.allclose(xtx_gth, xtx_cython_scipy), "Cython Scipy xtx mismatch"
+    assert np.allclose(xty_gth, xty_cython_scipy), "Cython Scipy xty mismatch"
     assert np.allclose(xtx_gth, xtx_pybind), "Pybind xtx mismatch"
     assert np.allclose(xty_gth, xty_pybind), "Pybind xty mismatch"
     assert np.allclose(xtx_gth, xtx_pybind_openbals), "Pybind OpenBLAS xtx mismatch"

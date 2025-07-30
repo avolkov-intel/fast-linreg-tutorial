@@ -1,4 +1,5 @@
 from utils_cython import compute_xtx_xty as compute_xtx_xty_cython
+from utils_cython import compute_xtx_xty_cython_scipy
 from utils_pybind import compute_xtx_xty as compute_xtx_xty_pybind
 from utils import compute_xtx_xty_baseline, compute_xtx_xty_numpy, generate_data, benchmark, linear_regression, linear_regression_gth
 from time import time
@@ -21,6 +22,7 @@ print("Running XtX and Xty benchmarks...")
 #print(f"Baseline: \n{benchmark_syrk_gemv(compute_xtx_xty_baseline, X, y)} \n")
 print(f"Numpy: \n{benchmark(compute_xtx_xty_numpy, [X, y])[0]} \n")
 print(f"Cython: \n{benchmark(compute_xtx_xty_cython, [X, y])[0]} \n")
+print(f"Cython Scipy: \n{benchmark(compute_xtx_xty_cython_scipy, [X, y])[0]} \n")
 print(f"Pybind: \n{benchmark(compute_xtx_xty_pybind, [X, y, False])[0]} \n")
 print(f"Pybind with OpenBLAS: \n{benchmark(compute_xtx_xty_pybind, [X, y, True])[0]} \n")
 

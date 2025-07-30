@@ -3,7 +3,6 @@ import scipy
 from time import time
 from sklearn.linear_model import LinearRegression
 
-
 def generate_data(n, p, seed=None):
     """
     Generate random data of shape (n, p).
@@ -65,5 +64,5 @@ def linear_regression(compute_xtx_xty, X, y, use_openblas=None):
         A, b = compute_xtx_xty(X, y)
     else:
         A, b = compute_xtx_xty(X, y, use_openblas)
-    w = scipy.linalg.lstsq(A, b)[0]
+    w = scipy.linalg.solve(A, b, assume_a='pos')
     return w
