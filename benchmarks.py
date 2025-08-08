@@ -22,6 +22,7 @@ print("Running XtX and Xty benchmarks...")
 print(f"Numpy: \n{benchmark(compute_xtx_xty_numpy, [X, y])[0]} \n")
 print(f"Cython: \n{benchmark(compute_xtx_xty_cython, [X, y])[0]} \n")
 print(f"Pybind: \n{benchmark(compute_xtx_xty_pybind, [X, y, False])[0]} \n")
+print(f"Cython with OpenBLAS: \n{benchmark(compute_xtx_xty_cython, [X, y, True])[0]} \n")
 print(f"Pybind with OpenBLAS: \n{benchmark(compute_xtx_xty_pybind, [X, y, True])[0]} \n")
 
 print("Running Linear regression benchmarks...")
