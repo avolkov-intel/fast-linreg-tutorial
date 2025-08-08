@@ -1,6 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-#include <cblas.h>
+#include "blas_helpers.h"
 
 namespace py = pybind11;
 

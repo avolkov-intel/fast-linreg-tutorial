@@ -3,16 +3,6 @@ from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
 import pybind11
 import numpy
-import sys
-import os
-
-# Detect OpenBLAS
-openblas_include_dirs = []
-openblas_library_dirs = []
-openblas_libs = ["openblas"]
-
-# Compiler flags
-extra_compile_args = ["-O3", "-std=c++14"]
 
 # === 1. Pybind11 Extension ===
 pybind11_ext = Extension(
@@ -21,10 +11,8 @@ pybind11_ext = Extension(
     include_dirs=[
         pybind11.get_include(),
         numpy.get_include(),
-        *openblas_include_dirs
+        ".",
     ],
-    libraries=openblas_libs,
-    library_dirs=openblas_library_dirs,
     extra_compile_args=["-O3"],
     language="c++"
 )
