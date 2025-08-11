@@ -14,6 +14,15 @@ openblas_libs = ["openblas"]
 # Compiler flags
 extra_compile_args = ["-O3", "-std=c++14"]
 
+# OpenMP linkage
+# Note: different platforms and compiler require different arguments.
+# For example, on windows with the MSVC compiler, it requires argument '/openmp',
+# while on macOS it might require '-Xclang -fopenmp -lomp', and under some
+# clang versions, might require additional linkage to 'libomp'.
+# For simplicity, this only adds OpenMP functionality when running on linux, where
+# the flag is supported almost universally across compilers.
+args_openmp = ["-fopenmp"] if sys.platform == "linux" else []
+
 # === 1. Pybind11 Extension ===
 pybind11_ext = Extension(
     "utils_pybind",
@@ -25,7 +34,8 @@ pybind11_ext = Extension(
     ],
     libraries=openblas_libs,
     library_dirs=openblas_library_dirs,
-    extra_compile_args=["-O3"],
+    extra_compile_args=["-O3"] + args_openmp,
+    extra_link_args=args_openmp,
     language="c++"
 )
 
