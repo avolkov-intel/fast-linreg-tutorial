@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-#include <cblas.h>
+#include "blas_helpers.h"
+typedef pybind11::ssize_t ssize_t;
 
 namespace py = pybind11;
 
