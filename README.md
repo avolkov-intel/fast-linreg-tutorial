@@ -38,7 +38,7 @@ mamba create -n linreg_env -c conda-forge python numpy scipy cython pybind11 set
 3) Build the extension modules for this tutorial
 
 ```
-python setup.py build_ext --inplace
+python setup.py build_ext --inplace --force
 ```
 
 4) Runtime benchmarks
