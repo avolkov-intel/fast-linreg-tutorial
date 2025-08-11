@@ -65,5 +65,5 @@ def linear_regression(compute_xtx_xty, X, y, use_openblas=None):
         A, b = compute_xtx_xty(X, y)
     else:
         A, b = compute_xtx_xty(X, y, use_openblas)
-    w = scipy.linalg.lstsq(A, b)[0]
-    return w
+    coefs = scipy.linalg.lstsq(A, b)[0]
+    return coefs
