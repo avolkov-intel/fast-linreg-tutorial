@@ -1,6 +1,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-#include <cblas.h>
+extern "C" {
+void dsyrk_(const char*, const char*, const int*, const int*, const double*, const double*, const int*, const double*, double*, const int*);
+void dgemv_(const char*, const int*, const int*, const double*, const double*, const int*, const double*, const int*, const double*, double*, const int*);
+}
 
 namespace py = pybind11;
 
@@ -56,19 +59,15 @@ py::tuple compute_xtx_xty(py::array_t<double> X, py::array_t<double> y, bool use
 
     } else {
 
-        // Compute X^T X using cblas_dsyrk (symmetric rank-k update)
-        cblas_dsyrk(
-            CblasRowMajor,    // Row major
-            CblasUpper,       // We'll fill upper triangle
-            CblasTrans,       // Need X^T * X, so transpose X
-            n_features,       // Size of output (n_features x n_features)
-            n_samples,        // k
-            1.0,              // alpha
-            X_ptr,            // input matrix (X)
-            n_features,       // leading dimension of inpuit matrix (lda)
-            0.0,              // beta
-            A_ptr,            // output matrix (XtX)
-            n_features        // leading dimension of output matrix (ldc)
+        const int p_ = n_features;
+        const int n_ = n_samples;
+        const double one = 1.0;
+        const double zero = 0.0;
+        dsyrk_(
+            "L", "N",
+            &p_, &n_,
+            &one, X_ptr, &p_,
+            &zero, A_ptr, &p_
         );
 
         // Since only the upper part is filled by dsyrk, we copy it to the lower part manually
@@ -78,20 +77,12 @@ py::tuple compute_xtx_xty(py::array_t<double> X, py::array_t<double> y, bool use
             }
         }
 
-        // Compute X^T y using cblas_dgemv (matrix-vector multiplication)
-        cblas_dgemv(
-            CblasRowMajor,
-            CblasTrans,       // transpose X
-            n_samples,        // input matrix dimensions
-            n_features,       // input matrix dimensions
-            1.0,              // alpha
-            X_ptr,            // input matrix (X)
-            n_features,       // leading dimension of inpuit matrix (lda)
-            y_ptr,            // input vector (y)
-            1,                // leading dimension of input vector
-            0.0,              // beta 
-            b_ptr,            // output vector (b)
-            1                 // leading dimension of output vector
+        const int one_int = 1;
+        dgemv_(
+            "N", &p_, &n_,
+            &one, X_ptr, &p_,
+            y_ptr, &one_int,
+            &zero, b_ptr, &one_int
         );
 
     }
