@@ -2,6 +2,7 @@ import numpy as np
 import scipy
 from time import time
 from sklearn.linear_model import LinearRegression
+from scipy.linalg import solve
 
 
 def generate_data(n, p, seed=None):
@@ -65,5 +66,13 @@ def linear_regression(compute_xtx_xty, X, y, use_openblas=None):
         A, b = compute_xtx_xty(X, y)
     else:
         A, b = compute_xtx_xty(X, y, use_openblas)
-    w = scipy.linalg.lstsq(A, b)[0]
-    return w
+    solve(
+        A,
+        b,
+        lower=not A.flags["C_CONTIGUOUS"],
+        overwrite_a=True,
+        overwrite_b=True,
+        check_finite=False,
+        assume_a="pos",
+    )
+    return b

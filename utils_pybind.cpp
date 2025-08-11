@@ -57,6 +57,7 @@ py::tuple compute_xtx_xty(py::array_t<double> X, py::array_t<double> y, bool use
     } else {
 
         // Compute X^T X using cblas_dsyrk (symmetric rank-k update)
+        // Note that only the upper triangle in row-major order is filled
         cblas_dsyrk(
             CblasRowMajor,    // Row major
             CblasUpper,       // We'll fill upper triangle
@@ -70,13 +71,6 @@ py::tuple compute_xtx_xty(py::array_t<double> X, py::array_t<double> y, bool use
             A_ptr,            // output matrix (XtX)
             n_features        // leading dimension of output matrix (ldc)
         );
-
-        // Since only the upper part is filled by dsyrk, we copy it to the lower part manually
-        for (ssize_t i = 0; i < n_features; ++i) {
-            for (ssize_t j = i+1; j < n_features; ++j) {
-                A_ptr[j * n_features + i] = A_ptr[i * n_features + j];
-            }
-        }
 
         // Compute X^T y using cblas_dgemv (matrix-vector multiplication)
         cblas_dgemv(
