@@ -13,7 +13,6 @@ pybind11_ext = Extension(
         numpy.get_include(),
         ".",
     ],
-    extra_compile_args=["-O3"],
     language="c++"
 )
 
@@ -25,7 +24,6 @@ cython_exts = cythonize([
         include_dirs=[
             numpy.get_include()
         ],
-        extra_compile_args=["-O3"],
         language="c++"
     )
 ])
