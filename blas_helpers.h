@@ -49,6 +49,7 @@ void cblas_dgemv(
 
 int load_blas_funs()
 {
+    PyGILState_STATE gil_state = PyGILState_Ensure();
     PyObject *cython_blas_module = PyImport_ImportModule("scipy.linalg.cython_blas");
     PyObject *pyx_capi_obj = PyObject_GetAttrString(cython_blas_module, "__pyx_capi__");
     PyObject *cobj_dsyrk = PyDict_GetItemString(pyx_capi_obj, "dsyrk");
@@ -56,6 +57,7 @@ int load_blas_funs()
     dsyrk_ = reinterpret_cast<dsyrk_t>(PyCapsule_GetPointer(cobj_dsyrk, PyCapsule_GetName(cobj_dsyrk)));
     dgemv_ = reinterpret_cast<dgemv_t>(PyCapsule_GetPointer(cobj_dgemv, PyCapsule_GetName(cobj_dgemv)));
     Py_DECREF(cython_blas_module);
+    PyGILState_Release(gil_state);
     return 0;
 }
 
