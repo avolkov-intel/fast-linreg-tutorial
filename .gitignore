@@ -6,3 +6,4 @@ utils_cython.cpp
 *.so
 *.dll
 *.dylib
+*.pyd
