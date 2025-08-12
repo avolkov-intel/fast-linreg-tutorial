@@ -5,6 +5,8 @@
 #include <algorithm>
 #ifdef _OPENMP
 #   include <omp.h>
+#else
+#   define omp_get_thread_num() 0
 #endif
 #include "blas_helpers.h"
 typedef pybind11::ssize_t ssize_t;
@@ -20,6 +22,7 @@ namespace py = pybind11;
  how to code in C++.
 */
 
+bool printed_no_omp_msg = false;
 void compute_xtx_xty_blocked(
     const double *X,
     const double *y,
@@ -62,10 +65,6 @@ py::tuple compute_xtx_xty(
     // Zero-initialize
     std::fill(A_ptr, A_ptr + n_features * n_features, 0.0);
     std::fill(b_ptr, b_ptr + n_features, 0.0);
-
-#ifndef _OPENMP
-    blocked = false; /* requires OpenMP */
-#endif
 
     if (!use_openblas) {
 
@@ -122,8 +121,8 @@ py::tuple compute_xtx_xty(
 
     }
 
-#ifdef _OPENMP
     else {
+
         compute_xtx_xty_blocked(
             X_ptr,
             y_ptr,
@@ -133,12 +132,10 @@ py::tuple compute_xtx_xty(
             b_ptr
         );
     }
-#endif
 
     return py::make_tuple(A, b);
 }
 
-#ifdef _OPENMP
 void compute_xtx_xty_blocked(
     const double *X,
     const double *y,
@@ -148,6 +145,16 @@ void compute_xtx_xty_blocked(
     double *b
 )
 {
+#ifndef _OPENMP
+    n_threads = 1;
+    if (!printed_no_omp_msg) {
+        PyGILState_STATE gil_state = PyGILState_Ensure();
+        PySys_WriteStdout("\tNote: blocked version running single-threaded (no OpenMP)\n");
+        PyGILState_Release(gil_state);
+        printed_no_omp_msg = true;
+    }
+#endif
+
     const int block_size = 256;
     const int num_blocks = n / block_size;
     const int size_remainder = n - num_blocks * block_size;
@@ -159,7 +166,9 @@ void compute_xtx_xty_blocked(
     std::vector< std::unique_ptr<double[]> > A_thread_memory(n_threads);
     std::vector< std::unique_ptr<double[]> > b_thread_memory(n_threads);
 
+#ifdef _OPENMP
     #pragma omp parallel for schedule(static) num_threads(n_threads)
+#endif
     for (int block_id = 0; block_id < num_blocks; block_id++)
     {
         const int thread_id = omp_get_thread_num();
@@ -227,7 +236,6 @@ void compute_xtx_xty_blocked(
         }
     }
 }
-#endif
 
 PYBIND11_MODULE(utils_pybind, m) {
     m.def("compute_xtx_xty", &compute_xtx_xty, "Compute X^T X and X^T y using nested loops or OpenBLAS");

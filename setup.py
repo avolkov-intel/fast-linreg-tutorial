@@ -12,7 +12,11 @@ import sys
 # clang versions, might require additional linkage to 'libomp'.
 # For simplicity, this only adds OpenMP functionality when running on linux, where
 # the flag is supported almost universally across compilers.
-args_openmp = ["-fopenmp"] if sys.platform == "linux" else []
+args_openmp = []
+if sys.platform == "linux":
+    args_openmp = ["-fopenmp"]
+elif sys.platform == "win32":
+    args_openmp = ["/openmp"]
 
 # === 1. Pybind11 Extension ===
 pybind11_ext = Extension(
