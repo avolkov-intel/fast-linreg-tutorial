@@ -62,5 +62,6 @@ def linear_regression(compute_xtx_xty, *args):
     Attendees will be asked to implement it.
     """
     A, b = compute_xtx_xty(*args)
-    w = scipy.linalg.lstsq(A, b)[0]
-    return w
+    coefs = scipy.linalg.lstsq(A, b)[0]
+    return coefs
+

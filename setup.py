@@ -3,16 +3,6 @@ from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
 import pybind11
 import numpy
-import sys
-import os
-
-# Detect OpenBLAS
-openblas_include_dirs = []
-openblas_library_dirs = []
-openblas_libs = ["openblas"]
-
-# Compiler flags
-extra_compile_args = ["-O3", "-std=c++14"]
 
 # OpenMP linkage
 # Note: different platforms and compiler require different arguments.
@@ -30,11 +20,9 @@ pybind11_ext = Extension(
     include_dirs=[
         pybind11.get_include(),
         numpy.get_include(),
-        *openblas_include_dirs
+        ".",
     ],
-    libraries=openblas_libs,
-    library_dirs=openblas_library_dirs,
-    extra_compile_args=["-O3"] + args_openmp,
+    extra_compile_args=args_openmp,
     extra_link_args=args_openmp,
     language="c++"
 )
@@ -47,7 +35,6 @@ cython_exts = cythonize([
         include_dirs=[
             numpy.get_include()
         ],
-        extra_compile_args=["-O3"],
         language="c++"
     )
 ])
