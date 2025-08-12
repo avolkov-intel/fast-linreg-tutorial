@@ -8,10 +8,37 @@
 #else
 #   define omp_get_thread_num() 0
 #endif
-#include "blas_helpers.h"
 typedef pybind11::ssize_t ssize_t;
 
 namespace py = pybind11;
+
+/* Workaround for loading required BLAS functions from SciPy */
+extern "C" {
+typedef void (*dsyrk_t)(const char*, const char*, const int*, const int*, const double*, const double*, const int*, const double*, double*, const int*);
+typedef void (*dgemv_t)(const char*, const int*, const int*, const double*, const double*, const int*, const double*, const int*, const double*, double*, const int*);
+typedef void (*daxpy_t)(const int*, const double*, const double*, const int*, double*, const int*);
+dsyrk_t dsyrk_;
+dgemv_t dgemv_;
+daxpy_t daxpy_;
+} /* extern "C" */
+
+int load_blas_funs()
+{
+    PyGILState_STATE gil_state = PyGILState_Ensure();
+    PyObject *cython_blas_module = PyImport_ImportModule("scipy.linalg.cython_blas");
+    PyObject *pyx_capi_obj = PyObject_GetAttrString(cython_blas_module, "__pyx_capi__");
+    PyObject *cobj_dsyrk = PyDict_GetItemString(pyx_capi_obj, "dsyrk");
+    PyObject *cobj_dgemv = PyDict_GetItemString(pyx_capi_obj, "dgemv");
+    PyObject *cobj_daxpy = PyDict_GetItemString(pyx_capi_obj, "daxpy");
+    dsyrk_ = reinterpret_cast<dsyrk_t>(PyCapsule_GetPointer(cobj_dsyrk, PyCapsule_GetName(cobj_dsyrk)));
+    dgemv_ = reinterpret_cast<dgemv_t>(PyCapsule_GetPointer(cobj_dgemv, PyCapsule_GetName(cobj_dgemv)));
+    daxpy_ = reinterpret_cast<daxpy_t>(PyCapsule_GetPointer(cobj_daxpy, PyCapsule_GetName(cobj_daxpy)));
+    Py_DECREF(cython_blas_module);
+    PyGILState_Release(gil_state);
+    return 0;
+}
+
+const int dummy = load_blas_funs();
 
 /*
  Here are two implementation of XtX and Xty kernels:
@@ -35,7 +62,7 @@ void compute_xtx_xty_blocked(
 py::tuple compute_xtx_xty(
     py::array_t<double> X,
     py::array_t<double> y,
-    bool use_openblas,
+    bool use_blas,
     bool blocked,
     int n_threads_blocked
 ) {
@@ -66,7 +93,7 @@ py::tuple compute_xtx_xty(
     std::fill(A_ptr, A_ptr + n_features * n_features, 0.0);
     std::fill(b_ptr, b_ptr + n_features, 0.0);
 
-    if (!use_openblas) {
+    if (!use_blas) {
 
         // Compute X^T X and X^T y
         for (ssize_t i = 0; i < n_samples; ++i) {
@@ -81,19 +108,22 @@ py::tuple compute_xtx_xty(
 
     } else if (!blocked) {
 
-        // Compute X^T X using cblas_dsyrk (symmetric rank-k update)
-        cblas_dsyrk(
-            CblasRowMajor,    // Row major
-            CblasUpper,       // We'll fill upper triangle
-            CblasTrans,       // Need X^T * X, so transpose X
-            n_features,       // Size of output (n_features x n_features)
-            n_samples,        // k
-            1.0,              // alpha
-            X_ptr,            // input matrix (X)
-            n_features,       // leading dimension of inpuit matrix (lda)
-            0.0,              // beta
-            A_ptr,            // output matrix (XtX)
-            n_features        // leading dimension of output matrix (ldc)
+        const int p_ = n_features;
+        const int n_ = n_samples;
+        const double one = 1.0;
+        const double zero = 0.0;
+        dsyrk_(
+            "L", "N",
+            &p_, &n_,
+            &one, X_ptr, &p_,
+            &zero, A_ptr, &p_
+        );
+        const int one_int = 1;
+        dgemv_(
+            "N", &p_, &n_,
+            &one, X_ptr, &p_,
+            y_ptr, &one_int,
+            &zero, b_ptr, &one_int
         );
 
         // Since only the upper part is filled by dsyrk, we copy it to the lower part manually
@@ -102,22 +132,6 @@ py::tuple compute_xtx_xty(
                 A_ptr[j * n_features + i] = A_ptr[i * n_features + j];
             }
         }
-
-        // Compute X^T y using cblas_dgemv (matrix-vector multiplication)
-        cblas_dgemv(
-            CblasRowMajor,
-            CblasTrans,       // transpose X
-            n_samples,        // input matrix dimensions
-            n_features,       // input matrix dimensions
-            1.0,              // alpha
-            X_ptr,            // input matrix (X)
-            n_features,       // leading dimension of inpuit matrix (lda)
-            y_ptr,            // input vector (y)
-            1,                // leading dimension of input vector
-            0.0,              // beta 
-            b_ptr,            // output vector (b)
-            1                 // leading dimension of output vector
-        );
 
     }
 
@@ -166,6 +180,10 @@ void compute_xtx_xty_blocked(
     std::vector< std::unique_ptr<double[]> > A_thread_memory(n_threads);
     std::vector< std::unique_ptr<double[]> > b_thread_memory(n_threads);
 
+    const double one = 1.0;
+    const double zero = 0.0;
+    const int one_int = 1;
+
 #ifdef _OPENMP
     #pragma omp parallel for schedule(static) num_threads(n_threads)
 #endif
@@ -181,18 +199,17 @@ void compute_xtx_xty_blocked(
         const double *X_block = X + block_id*block_size*p;
         const double *y_block = y + block_id*block_size;
 
-        cblas_dsyrk(
-            CblasRowMajor, CblasUpper, CblasTrans,
-            p, block_size,
-            1.0, X_block, p,
-            1.0, A_thread, p
+        dsyrk_(
+            "L", "N",
+            &p, &block_size,
+            &one, X_block, &p,
+            &one, A_thread, &p
         );
-        cblas_dgemv(
-            CblasRowMajor, CblasTrans,
-            block_size, p,
-            1.0, X_block, p,
-            y_block, 1,
-            1.0, b_thread, 1
+        dgemv_(
+            "N", &p, &block_size,
+            &one, X_block, &p,
+            y_block, &one_int,
+            &one, b_thread, &one_int
         );
     }
 
@@ -210,24 +227,23 @@ void compute_xtx_xty_blocked(
     }
 
     else {
-        cblas_dsyrk(
-            CblasRowMajor, CblasUpper, CblasTrans,
-            p, size_remainder,
-            1.0, X + num_blocks*block_size*p, p,
-            0.0, A, p
+        dsyrk_(
+            "L", "N",
+            &p, &size_remainder,
+            &one, X + num_blocks*block_size*p, &p,
+            &zero, A, &p
         );
-        cblas_dgemv(
-            CblasRowMajor, CblasTrans,
-            size_remainder, p,
-            1.0, X + num_blocks*block_size*p, p,
-            y + num_blocks*block_size, 1,
-            0.0, b, 1
+        dgemv_(
+            "N", &p, &size_remainder,
+            &one, X + num_blocks*block_size*p, &p,
+            y + num_blocks*block_size, &one_int,
+            &zero, b, &one_int
         );
     }
 
     for (int thread_id = size_remainder? 0 : 1; thread_id < n_threads; thread_id++) {
-        cblas_daxpy(dim_A, 1.0, A_thread_memory[thread_id].get(), 1, A, 1);
-        cblas_daxpy(dim_b, 1.0, b_thread_memory[thread_id].get(), 1, b, 1);
+        daxpy_(&dim_A, &one, A_thread_memory[thread_id].get(), &one_int, A, &one_int);
+        daxpy_(&dim_b, &one, b_thread_memory[thread_id].get(), &one_int, b, &one_int);
     }
 
     for (int row = 1; row < p; row++) {
