@@ -12,7 +12,11 @@ typedef pybind11::ssize_t ssize_t;
 
 namespace py = pybind11;
 
-/* Workaround for loading required BLAS functions from SciPy */
+/*
+ Workaround for loading required BLAS functions from SciPy.
+ This is not required if linking directly to a BLAS library.
+*/
+
 extern "C" {
 typedef void (*dsyrk_t)(const char*, const char*, const int*, const int*, const double*, const double*, const int*, const double*, double*, const int*);
 typedef void (*dgemv_t)(const char*, const int*, const int*, const double*, const double*, const int*, const double*, const int*, const double*, double*, const int*);
