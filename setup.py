@@ -6,12 +6,14 @@ import numpy
 import sys
 
 # OpenMP linkage
-# Note: different platforms and compiler require different arguments.
+# Note: different platforms and compilers require different arguments for OMP linkage.
 # For example, on windows with the MSVC compiler, it requires argument '/openmp',
-# while on macOS it might require '-Xclang -fopenmp -lomp', and under some
-# clang versions, might require additional linkage to 'libomp'.
-# For simplicity, this only adds OpenMP functionality when running on linux, where
-# the flag is supported almost universally across compilers.
+# while on macOS it might require '-Xclang -fopenmp -lomp' (plus additional external
+# installations of the OpenMP runtime library), and under some clang versions on
+# linux, might require additional linkage to 'libomp'.
+# For simplicity, this skips linkage to OpenMP on platforms other than windows and linux
+# (i.e. will not use OpenMP on macOS). Note that compiling on windows with the mingw
+# compiler requires changing the argument from '/openmp' to '-fopenmp'.
 args_openmp = []
 if sys.platform == "linux":
     args_openmp = ["-fopenmp"]
