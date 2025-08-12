@@ -49,7 +49,7 @@ cdef void compute_xtx_xty_blas(
     double *A,
     double *b
 ) noexcept nogil:
-    # Compute X^T X using cblas_dsyrk (symmetric rank-k update)
+    # Compute X^T X using dsyrk (symmetric rank-k update)
     cdef double one = 1.0
     cdef double zero = 0.0
     cdef char L = 76 # ASCII for letter 'L'
@@ -67,7 +67,7 @@ cdef void compute_xtx_xty_blas(
         for j in range(i + 1, p):
             A[i + j * p] = A[j + i * p]
 
-    # Compute X^T y using cblas_dgemv (matrix-vector multiplication)
+    # Compute X^T y using dgemv (matrix-vector multiplication)
     cdef int one_int = 1
     dgemv(
         "N", &p, &n,
