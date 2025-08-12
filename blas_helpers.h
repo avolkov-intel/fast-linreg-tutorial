@@ -10,8 +10,10 @@ extern "C" {
 
 typedef void (*dsyrk_t)(const char*, const char*, const int*, const int*, const double*, const double*, const int*, const double*, double*, const int*);
 typedef void (*dgemv_t)(const char*, const int*, const int*, const double*, const double*, const int*, const double*, const int*, const double*, double*, const int*);
+typedef void (*daxpy_t)(const int*, const double*, const double*, const int*, double*, const int*);
 dsyrk_t dsyrk_;
 dgemv_t dgemv_;
+daxpy_t daxpy_;
 
 typedef enum CBLAS_ORDER     {CblasRowMajor=101, CblasColMajor=102} CBLAS_ORDER;
 typedef enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113, CblasConjNoTrans=114} CBLAS_TRANSPOSE;
@@ -54,8 +56,10 @@ int load_blas_funs()
     PyObject *pyx_capi_obj = PyObject_GetAttrString(cython_blas_module, "__pyx_capi__");
     PyObject *cobj_dsyrk = PyDict_GetItemString(pyx_capi_obj, "dsyrk");
     PyObject *cobj_dgemv = PyDict_GetItemString(pyx_capi_obj, "dgemv");
+    PyObject *cobj_daxpy = PyDict_GetItemString(pyx_capi_obj, "daxpy");
     dsyrk_ = reinterpret_cast<dsyrk_t>(PyCapsule_GetPointer(cobj_dsyrk, PyCapsule_GetName(cobj_dsyrk)));
     dgemv_ = reinterpret_cast<dgemv_t>(PyCapsule_GetPointer(cobj_dgemv, PyCapsule_GetName(cobj_dgemv)));
+    daxpy_ = reinterpret_cast<daxpy_t>(PyCapsule_GetPointer(cobj_daxpy, PyCapsule_GetName(cobj_daxpy)));
     Py_DECREF(cython_blas_module);
     PyGILState_Release(gil_state);
     return 0;
@@ -153,4 +157,17 @@ void cblas_dgemv
 
         dgemv_(&trans, &n, &m, &alpha, a, &lda, x, &incx, &beta, y, &incy);
     }
+}
+
+void cblas_daxpy
+(
+    const int n,
+    const double a,
+    const double *x,
+    const int incx,
+    double *y,
+    const int incy
+)
+{
+    daxpy_(&n, &a, x, &incx, y, &incy);
 }

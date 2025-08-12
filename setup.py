@@ -3,6 +3,7 @@ from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
 import pybind11
 import numpy
+import sys
 
 # OpenMP linkage
 # Note: different platforms and compiler require different arguments.

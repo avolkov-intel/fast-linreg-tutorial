@@ -1,6 +1,5 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-#include <cblas.h>
 #include <vector>
 #include <memory>
 #include <algorithm>
