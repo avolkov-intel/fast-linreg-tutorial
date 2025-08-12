@@ -2,7 +2,7 @@ import numpy as np
 cimport numpy as np
 from cython import boundscheck
 from libcpp cimport bool
-include "cython_blas_helpers.pxi"
+from scipy.linalg.cython_blas cimport dsyrk, dgemv
 
 """
  Here is the implementation of XtX and Xty kernels with nested loops
@@ -38,20 +38,24 @@ cdef void compute_xtx_xty_naive(
                 A_row_j[k] += x_ij * X_row_i[k]
 
 cdef void compute_xtx_xty_blas(
-    const double *X,
-    const double *y,
-    const int n,
-    const int p,
+    double *X,
+    double *y,
+    int n,
+    int p,
     double *A,
     double *b
 ) noexcept nogil:
     # Compute X^T X using cblas_dsyrk (symmetric rank-k update)
-    cblas_dsyrk(
-        CblasRowMajor, CblasUpper, CblasTrans,
-        p, n,
-        1.0, X, p,
-        0.0, A, p,
-    )
+    cdef double one = 1.0
+    cdef double zero = 0.0
+    cdef char L = 76 # ASCII for letter 'L'
+    cdef char N = 78 # ASCII for letter 'N'
+    dsyrk(
+        &L, &N,
+        &p, &n,
+        &one, X, &p,
+        &zero, A, &p
+    );
 
     # Since only the upper part is filled by dsyrk, we copy it to the lower part manually
     cdef int i, j
@@ -60,13 +64,13 @@ cdef void compute_xtx_xty_blas(
             A[i + j * p] = A[j + i * p]
 
     # Compute X^T y using cblas_dgemv (matrix-vector multiplication)
-    cblas_dgemv(
-        CblasRowMajor, CblasTrans,
-        n, p,
-        1.0, X, p,
-        y, 1,
-        0.0, b, 1,
-    )
+    cdef int one_int = 1
+    dgemv(
+        "N", &p, &n,
+        &one, X, &p,
+        y, &one_int,
+        &zero, b, &one_int
+    );
 
 @boundscheck(False)
 def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
