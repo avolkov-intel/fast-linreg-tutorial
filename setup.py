@@ -42,6 +42,8 @@ cython_exts = cythonize([
         include_dirs=[
             numpy.get_include()
         ],
+        extra_compile_args=args_openmp,
+        extra_link_args=args_openmp,
         language="c++"
     )
 ])

@@ -2,7 +2,10 @@ import numpy as np
 cimport numpy as np
 from cython import boundscheck
 from libcpp cimport bool
-from scipy.linalg.cython_blas cimport dsyrk, dgemv
+from libcpp.vector cimport vector
+from libcpp.algorithm cimport copy
+from cython.parallel cimport threadid, prange
+from scipy.linalg.cython_blas cimport dsyrk, dgemv, daxpy
 
 """
  Here is the implementation of XtX and Xty kernels with nested loops
@@ -73,11 +76,123 @@ cdef void compute_xtx_xty_blas(
         &zero, b, &one_int
     )
 
+cdef extern from *:
+    """
+    bool check_has_openmp()
+    {
+#ifdef _OPENMP
+        return true;
+#else
+        return false;
+#endif
+    }
+    """
+    bool check_has_openmp() nogil noexcept
+cdef bool printed_no_omp_msg = False
+
+cdef void compute_xtx_xty_blas_blocked(
+    double *X,
+    double *y,
+    int n,
+    int p,
+    double *A,
+    double *b,
+    int n_threads
+) noexcept nogil:
+    global printed_no_omp_msg
+    cdef double one = 1.0
+    cdef double zero = 0.0
+    cdef char L = 76 # ASCII for letter 'L'
+    cdef char N = 78 # ASCII for letter 'N'
+    cdef int one_int = 1
+
+    cdef int block_size = 256
+    cdef int num_blocks = <int>(n / block_size)
+    cdef int size_remainder = n - num_blocks * block_size
+    if num_blocks < n_threads:
+        n_threads = num_blocks
+    if not check_has_openmp():
+        n_threads = 1
+        if not printed_no_omp_msg:
+            printed_no_omp_msg = True
+            with gil:
+                print("\tNote: blocked version running single-threaded (no OpenMP)")
+
+    cdef int dim_A = p*p
+    cdef int dim_b = p
+
+    # Note: the vectors inside allocated inside the parallel loop by
+    # the thread that uses them, in order to preserve numa locality.
+    cdef vector[ vector[double] ] A_thread_memory
+    cdef vector[ vector[double] ] b_thread_memory
+    A_thread_memory.resize(n_threads)
+    b_thread_memory.resize(n_threads)
+
+    cdef int block_id
+
+    for block_id in prange(num_blocks, nogil=True, schedule="static", num_threads=n_threads):
+
+        if A_thread_memory[threadid()].empty():
+            A_thread_memory[threadid()].resize(dim_A)
+        if b_thread_memory[threadid()].empty():
+            b_thread_memory[threadid()].resize(dim_b)
+
+        dsyrk(
+            &L, &N,
+            &p, &block_size,
+            &one, X + block_id*block_size*p, &p,
+            &one, A_thread_memory[threadid()].data(), &p
+        )
+        dgemv(
+            &N, &p, &block_size,
+            &one, X + block_id*block_size*p, &p,
+            y + block_id*block_size, &one_int,
+            &one, b_thread_memory[threadid()].data(), &one_int
+        )
+
+    if not size_remainder:
+        copy(
+            A_thread_memory[0].data(),
+            A_thread_memory[0].data() + dim_A,
+            A
+        )
+        copy(
+            b_thread_memory[0].data(),
+            b_thread_memory[0].data() + dim_b,
+            b
+        )
+    else:
+        dsyrk(
+            &L, &N,
+            &p, &size_remainder,
+            &one, X + num_blocks*block_size*p, &p,
+            &zero, A, &p
+        )
+        dgemv(
+            &N, &p, &size_remainder,
+            &one, X + num_blocks*block_size*p, &p,
+            y + num_blocks*block_size, &one_int,
+            &zero, b, &one_int
+        )
+
+    cdef int thread_id
+    cdef int thread_id_start = 0 if size_remainder else 1
+    for thread_id in range(thread_id_start, n_threads):
+        daxpy(&dim_A, &one, A_thread_memory[thread_id].data(), &one_int, A, &one_int)
+        daxpy(&dim_b, &one, b_thread_memory[thread_id].data(), &one_int, b, &one_int)
+
+    cdef int row, col
+    for row in range(1, p):
+        for col in range(row):
+            A[col + row*p] = A[row + col*p]
+
 
 @boundscheck(False)
 def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                     np.ndarray[np.float64_t, ndim=1] y,
-                    bool use_blas=False):
+                    bool use_blas=False,
+                    bool blocked=False,
+                    int n_threads=1):
     cdef int n = X.shape[0]
     cdef int p = X.shape[1]
 
@@ -96,13 +211,24 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                 &b[0],
             )
         else:
-            compute_xtx_xty_blas(
-                &X[0, 0],
-                &y[0],
-                n,
-                p,
-                &A[0, 0],
-                &b[0],
-            )
+            if not blocked:
+                compute_xtx_xty_blas(
+                    &X[0, 0],
+                    &y[0],
+                    n,
+                    p,
+                    &A[0, 0],
+                    &b[0],
+                )
+            else:
+                compute_xtx_xty_blas_blocked(
+                    &X[0, 0],
+                    &y[0],
+                    n,
+                    p,
+                    &A[0, 0],
+                    &b[0],
+                    n_threads,
+                )
 
     return A, b
