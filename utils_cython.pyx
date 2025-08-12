@@ -1,5 +1,6 @@
 import numpy as np
 cimport numpy as np
+from cython import boundscheck
 from libcpp cimport bool
 include "cython_blas_helpers.pxi"
 
@@ -28,11 +29,11 @@ cdef void compute_xtx_xty_naive(
     # row being reused, while similar code written in C/C++ directly would generate
     # something that compilers are better able to optimize.
     for i in range(n):
-        X_row_i = X + i*p
+        X_row_i = X + i * p
         for j in range(p):
             b[j] += X_row_i[j] * y[i]
             x_ij = X_row_i[j]
-            A_row_j = A + j*p
+            A_row_j = A + j * p
             for k in range(p):
                 A_row_j[k] += x_ij * X_row_i[k]
 
@@ -55,8 +56,8 @@ cdef void compute_xtx_xty_blas(
     # Since only the upper part is filled by dsyrk, we copy it to the lower part manually
     cdef int i, j
     for i in range(p):
-        for j in range(i+1, p):
-            A[i + j*p] = A[j + i*p]
+        for j in range(i + 1, p):
+            A[i + j * p] = A[j + i * p]
 
     # Compute X^T y using cblas_dgemv (matrix-vector multiplication)
     cblas_dgemv(
@@ -67,7 +68,7 @@ cdef void compute_xtx_xty_blas(
         0.0, b, 1,
     )
 
-
+@boundscheck(False)
 def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                     np.ndarray[np.float64_t, ndim=1] y,
                     bool use_blas=False):
