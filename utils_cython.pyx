@@ -37,6 +37,7 @@ cdef void compute_xtx_xty_naive(
             for k in range(p):
                 A_row_j[k] += x_ij * X_row_i[k]
 
+
 cdef void compute_xtx_xty_blas(
     double *X,
     double *y,
@@ -55,7 +56,7 @@ cdef void compute_xtx_xty_blas(
         &p, &n,
         &one, X, &p,
         &zero, A, &p
-    );
+    )
 
     # Since only the upper part is filled by dsyrk, we copy it to the lower part manually
     cdef int i, j
@@ -70,7 +71,8 @@ cdef void compute_xtx_xty_blas(
         &one, X, &p,
         y, &one_int,
         &zero, b, &one_int
-    );
+    )
+
 
 @boundscheck(False)
 def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
