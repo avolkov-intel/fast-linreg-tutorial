@@ -1,8 +1,6 @@
 import numpy as np
-import scipy
 from time import time
 from sklearn.linear_model import LinearRegression
-
 
 def generate_data(n, p, seed=None):
     """
@@ -62,6 +60,6 @@ def linear_regression(compute_xtx_xty, *args):
     Attendees will be asked to implement it.
     """
     A, b = compute_xtx_xty(*args)
-    coefs = scipy.linalg.lstsq(A, b)[0]
+    coefs = np.linalg.solve(A, b)
     return coefs
 
