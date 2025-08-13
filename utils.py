@@ -1,8 +1,6 @@
 import numpy as np
-import scipy
 from time import time
 from sklearn.linear_model import LinearRegression
-
 
 def generate_data(n, p, seed=None):
     """
@@ -56,14 +54,12 @@ def linear_regression_gth(X, y):
     model.fit(X, y)
     return model.coef_
 
-def linear_regression(compute_xtx_xty, X, y, use_openblas=None):
+def linear_regression(compute_xtx_xty, *args):
     """
     Training the own implementation of Linear Regression using XtX, Xty kernels and solver from scipy.
     Attendees will be asked to implement it.
     """
-    if (use_openblas is None):
-        A, b = compute_xtx_xty(X, y)
-    else:
-        A, b = compute_xtx_xty(X, y, use_openblas)
-    coefs = scipy.linalg.lstsq(A, b)[0]
+    A, b = compute_xtx_xty(*args)
+    coefs = np.linalg.solve(A, b)
     return coefs
+
