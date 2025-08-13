@@ -11,6 +11,7 @@
 typedef pybind11::ssize_t ssize_t;
 
 namespace py = pybind11;
+using namespace pybind11::literals;
 
 /*
  Workaround for loading required BLAS functions from SciPy.
@@ -188,6 +189,13 @@ void compute_xtx_xty_blocked(
     const double zero = 0.0;
     const int one_int = 1;
 
+    py::object thread_limit_ctx = (n_threads > 1)?
+        py::module_::import("threadpoolctl").attr("threadpool_limits")("limits"_a="sequential_blas_under_openmp")
+        :
+        py::module_::import("contextlib").attr("nullcontext")()
+    ;
+    thread_limit_ctx.attr("__enter__")();
+
 #ifdef _OPENMP
     #pragma omp parallel for schedule(static) num_threads(n_threads)
 #endif
@@ -216,6 +224,8 @@ void compute_xtx_xty_blocked(
             &one, b_thread, &one_int
         );
     }
+
+    thread_limit_ctx.attr("__exit__")(py::none(), py::none(), py::none());
 
     if (!size_remainder) {
         std::copy(
