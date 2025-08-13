@@ -134,7 +134,7 @@ cdef void compute_xtx_xty_blas_blocked(
 
     with gil:
         blas_lim_ctx = (
-            threadpool_limits(limits=1, user_api="blas")
+            threadpool_limits(limits=1, user_api="sequential_blas_under_openmp")
             if n_threads > 1 else
             nullcontext()
         )
