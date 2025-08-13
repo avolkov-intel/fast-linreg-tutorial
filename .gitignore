@@ -7,3 +7,4 @@ utils_cython.cpp
 *.dll
 *.dylib
 *.pyd
+*.html
