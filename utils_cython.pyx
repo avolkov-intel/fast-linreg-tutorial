@@ -6,6 +6,7 @@ from libcpp.vector cimport vector
 from libcpp.algorithm cimport copy
 from cython.parallel cimport threadid, prange
 from scipy.linalg.cython_blas cimport dsyrk, dgemv, daxpy
+import threadpoolctl
 
 """
  Here is the implementation of XtX and Xty kernels with nested loops
@@ -200,8 +201,8 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
     cdef np.ndarray[np.float64_t, ndim=2] A = np.zeros((p, p), dtype=np.float64)
     cdef np.ndarray[np.float64_t, ndim=1] b = np.zeros(p, dtype=np.float64)
 
-    with nogil:
-        if not use_blas:
+    if not use_blas:
+        with nogil:
             compute_xtx_xty_naive(
                 &X[0, 0],
                 &y[0],
@@ -210,8 +211,9 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                 &A[0, 0],
                 &b[0],
             )
-        else:
-            if not blocked:
+    else:
+        if not blocked:
+            with nogil:
                 compute_xtx_xty_blas(
                     &X[0, 0],
                     &y[0],
@@ -220,15 +222,17 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                     &A[0, 0],
                     &b[0],
                 )
-            else:
-                compute_xtx_xty_blas_blocked(
-                    &X[0, 0],
-                    &y[0],
-                    n,
-                    p,
-                    &A[0, 0],
-                    &b[0],
-                    n_threads,
-                )
+        else:
+            with threadpoolctl.threadpool_limits(limits=1, user_api="blas"):
+                with nogil:
+                    compute_xtx_xty_blas_blocked(
+                        &X[0, 0],
+                        &y[0],
+                        n,
+                        p,
+                        &A[0, 0],
+                        &b[0],
+                        n_threads,
+                    )
 
     return A, b
