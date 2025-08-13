@@ -101,7 +101,7 @@ cdef void compute_xtx_xty_blas_blocked(
     double *A,
     double *b,
     int n_threads
-) noexcept nogil:
+) except + nogil:
     global printed_no_omp_msg
     cdef double one = 1.0
     cdef double zero = 0.0
