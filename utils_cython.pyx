@@ -90,7 +90,7 @@ cdef extern from *:
 #endif
     }
     """
-    bool check_has_openmp() nogil noexcept
+    bool check_has_openmp() noexcept nogil
 cdef bool printed_no_omp_msg = False
 
 cdef void compute_xtx_xty_blas_blocked(
@@ -160,30 +160,30 @@ cdef void compute_xtx_xty_blas_blocked(
                     &one, b_thread_memory[threadid()].data(), &one_int
                 )
 
-            if not size_remainder:
-                copy(
-                    A_thread_memory[0].data(),
-                    A_thread_memory[0].data() + dim_A,
-                    A
-                )
-                copy(
-                    b_thread_memory[0].data(),
-                    b_thread_memory[0].data() + dim_b,
-                    b
-                )
-            else:
-                dsyrk(
-                    &L, &N,
-                    &p, &size_remainder,
-                    &one, X + num_blocks*block_size*p, &p,
-                    &zero, A, &p
-                )
-                dgemv(
-                    &N, &p, &size_remainder,
-                    &one, X + num_blocks*block_size*p, &p,
-                    y + num_blocks*block_size, &one_int,
-                    &zero, b, &one_int
-                )
+    if not size_remainder:
+        copy(
+            A_thread_memory[0].data(),
+            A_thread_memory[0].data() + dim_A,
+            A
+        )
+        copy(
+            b_thread_memory[0].data(),
+            b_thread_memory[0].data() + dim_b,
+            b
+        )
+    else:
+        dsyrk(
+            &L, &N,
+            &p, &size_remainder,
+            &one, X + num_blocks*block_size*p, &p,
+            &zero, A, &p
+        )
+        dgemv(
+            &N, &p, &size_remainder,
+            &one, X + num_blocks*block_size*p, &p,
+            y + num_blocks*block_size, &one_int,
+            &zero, b, &one_int
+        )
 
     cdef int thread_id
     cdef int thread_id_start = 0 if size_remainder else 1
