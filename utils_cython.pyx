@@ -6,7 +6,8 @@ from libcpp.vector cimport vector
 from libcpp.algorithm cimport copy
 from cython.parallel cimport threadid, prange
 from scipy.linalg.cython_blas cimport dsyrk, dgemv, daxpy
-import threadpoolctl
+from threadpoolctl import threadpool_limits
+from contextlib import nullcontext
 
 """
  Here is the implementation of XtX and Xty kernels with nested loops
@@ -131,50 +132,57 @@ cdef void compute_xtx_xty_blas_blocked(
 
     cdef int block_id
 
-    for block_id in prange(num_blocks, nogil=True, schedule="static", num_threads=n_threads):
+    with gil:
+        blas_lim_ctx = (
+            threadpool_limits(limits=1, user_api="blas")
+            if n_threads > 1 else
+            nullcontext()
+        )
+        with blas_lim_ctx:
+            for block_id in prange(num_blocks, nogil=True, schedule="static", num_threads=n_threads):
 
-        if A_thread_memory[threadid()].empty():
-            A_thread_memory[threadid()].resize(dim_A)
-        if b_thread_memory[threadid()].empty():
-            b_thread_memory[threadid()].resize(dim_b)
+                if A_thread_memory[threadid()].empty():
+                    A_thread_memory[threadid()].resize(dim_A)
+                if b_thread_memory[threadid()].empty():
+                    b_thread_memory[threadid()].resize(dim_b)
 
-        dsyrk(
-            &L, &N,
-            &p, &block_size,
-            &one, X + block_id*block_size*p, &p,
-            &one, A_thread_memory[threadid()].data(), &p
-        )
-        dgemv(
-            &N, &p, &block_size,
-            &one, X + block_id*block_size*p, &p,
-            y + block_id*block_size, &one_int,
-            &one, b_thread_memory[threadid()].data(), &one_int
-        )
+                dsyrk(
+                    &L, &N,
+                    &p, &block_size,
+                    &one, X + block_id*block_size*p, &p,
+                    &one, A_thread_memory[threadid()].data(), &p
+                )
+                dgemv(
+                    &N, &p, &block_size,
+                    &one, X + block_id*block_size*p, &p,
+                    y + block_id*block_size, &one_int,
+                    &one, b_thread_memory[threadid()].data(), &one_int
+                )
 
-    if not size_remainder:
-        copy(
-            A_thread_memory[0].data(),
-            A_thread_memory[0].data() + dim_A,
-            A
-        )
-        copy(
-            b_thread_memory[0].data(),
-            b_thread_memory[0].data() + dim_b,
-            b
-        )
-    else:
-        dsyrk(
-            &L, &N,
-            &p, &size_remainder,
-            &one, X + num_blocks*block_size*p, &p,
-            &zero, A, &p
-        )
-        dgemv(
-            &N, &p, &size_remainder,
-            &one, X + num_blocks*block_size*p, &p,
-            y + num_blocks*block_size, &one_int,
-            &zero, b, &one_int
-        )
+            if not size_remainder:
+                copy(
+                    A_thread_memory[0].data(),
+                    A_thread_memory[0].data() + dim_A,
+                    A
+                )
+                copy(
+                    b_thread_memory[0].data(),
+                    b_thread_memory[0].data() + dim_b,
+                    b
+                )
+            else:
+                dsyrk(
+                    &L, &N,
+                    &p, &size_remainder,
+                    &one, X + num_blocks*block_size*p, &p,
+                    &zero, A, &p
+                )
+                dgemv(
+                    &N, &p, &size_remainder,
+                    &one, X + num_blocks*block_size*p, &p,
+                    y + num_blocks*block_size, &one_int,
+                    &zero, b, &one_int
+                )
 
     cdef int thread_id
     cdef int thread_id_start = 0 if size_remainder else 1
@@ -201,8 +209,8 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
     cdef np.ndarray[np.float64_t, ndim=2] A = np.zeros((p, p), dtype=np.float64)
     cdef np.ndarray[np.float64_t, ndim=1] b = np.zeros(p, dtype=np.float64)
 
-    if not use_blas:
-        with nogil:
+    with nogil:
+        if not use_blas:
             compute_xtx_xty_naive(
                 &X[0, 0],
                 &y[0],
@@ -211,9 +219,8 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                 &A[0, 0],
                 &b[0],
             )
-    else:
-        if not blocked:
-            with nogil:
+        else:
+            if not blocked:
                 compute_xtx_xty_blas(
                     &X[0, 0],
                     &y[0],
@@ -222,17 +229,15 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                     &A[0, 0],
                     &b[0],
                 )
-        else:
-            with threadpoolctl.threadpool_limits(limits=1, user_api="blas"):
-                with nogil:
-                    compute_xtx_xty_blas_blocked(
-                        &X[0, 0],
-                        &y[0],
-                        n,
-                        p,
-                        &A[0, 0],
-                        &b[0],
-                        n_threads,
-                    )
+            else:
+                compute_xtx_xty_blas_blocked(
+                    &X[0, 0],
+                    &y[0],
+                    n,
+                    p,
+                    &A[0, 0],
+                    &b[0],
+                    n_threads,
+                )
 
     return A, b
