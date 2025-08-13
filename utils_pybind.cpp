@@ -46,6 +46,20 @@ int load_blas_funs()
 const int dummy = load_blas_funs();
 
 /*
+ Helper to symmetrize an array representing a square symmetric
+ matrix when only the upper triangular part has been filled,
+ as done by many BLAS functions
+*/
+void symmetrize_matrix(double *A, const int n)
+{
+    for (int row = 1; row < n; row++) {
+        for (int col = 0; col < row; col++) {
+            A[col + row*n] = A[row + col*n];
+        }
+    }
+}
+
+/*
  Here are two implementation of XtX and Xty kernels:
     - in first result is computed using nested loops
     - in second result is computed using OpenBLAS library
@@ -132,11 +146,7 @@ py::tuple compute_xtx_xty(
         );
 
         // Since only the upper part is filled by dsyrk, we copy it to the lower part manually
-        for (ssize_t i = 0; i < n_features; ++i) {
-            for (ssize_t j = i+1; j < n_features; ++j) {
-                A_ptr[j * n_features + i] = A_ptr[i * n_features + j];
-            }
-        }
+        symmetrize_matrix(A_ptr, n_features);
 
     }
 
@@ -260,11 +270,7 @@ void compute_xtx_xty_blocked(
         daxpy_(&dim_b, &one, b_thread_memory[thread_id].get(), &one_int, b, &one_int);
     }
 
-    for (int row = 1; row < p; row++) {
-        for (int col = 0; col < row; col++) {
-            A[col + row*p] = A[row + col*p];
-        }
-    }
+    symmetrize_matrix(A, p);
 }
 
 PYBIND11_MODULE(utils_pybind, m) {

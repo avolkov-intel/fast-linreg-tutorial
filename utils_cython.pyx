@@ -10,6 +10,15 @@ from scipy.linalg.cython_blas cimport dsyrk, dgemv, daxpy
 from threadpoolctl import threadpool_limits
 from contextlib import nullcontext
 
+# Helper to symmetrize an array representing a square symmetric
+# matrix when only the upper triangular part has been filled,
+# as done by many BLAS functions
+cdef void symmetrize_matrix(double *A, const int n) noexcept nogil:
+    cdef int row, col
+    for row in range(1, n):
+        for col in range(row):
+            A[col + row*n] = A[row + col*n]
+
 """
  Here is the implementation of XtX and Xty kernels with nested loops
  Attendes will be required to fill some gaps in this implementation.
@@ -65,10 +74,7 @@ cdef void compute_xtx_xty_blas(
     )
 
     # Since only the upper part is filled by dsyrk, we copy it to the lower part manually
-    cdef int i, j
-    for i in range(p):
-        for j in range(i + 1, p):
-            A[i + j * p] = A[j + i * p]
+    symmetrize_matrix(A, p)
 
     # Compute X^T y using dgemv (matrix-vector multiplication)
     cdef int one_int = 1
@@ -191,10 +197,7 @@ cdef void compute_xtx_xty_blas_blocked(
         daxpy(&dim_A, &one, A_thread_memory[thread_id].data(), &one_int, A, &one_int)
         daxpy(&dim_b, &one, b_thread_memory[thread_id].data(), &one_int, b, &one_int)
 
-    cdef int row, col
-    for row in range(1, p):
-        for col in range(row):
-            A[col + row*p] = A[row + col*p]
+    symmetrize_matrix(A, p)
 
 
 @boundscheck(False)
