@@ -1,12 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-
-
-// TODO PRACTICE 3:
-// #include "solutions/utils_pybind_blas.hpp"
-
-// TODO PRACTICE 4:
-// #include "solutions/utils_pybind_blas_blocked.hpp"
+#include "solutions/utils_pybind_blas.hpp"
+#include "solutions/utils_pybind_blas_blocked.hpp"
 
 #include <vector>
 #include <memory>
@@ -23,7 +18,15 @@ void compute_xtx_xty_naive(const double* X,
                            const int p,
                            double* A, 
                            double* b) {
-    // TODO PRACTICE 2: Fill A and b
+    // Compute X^T X and X^T y
+    for (ssize_t i = 0; i < n; ++i) {
+        for (ssize_t j = 0; j < p; ++j) {
+            b[j] += X[i * p + j] * y[i];
+            for (ssize_t k = 0; k < p; ++k) {
+                A[j * p + k] += X[i * p + j] * X[i * p + k];
+            }
+        }
+    }
 }
 
 py::tuple compute_xtx_xty(
@@ -69,9 +72,22 @@ py::tuple compute_xtx_xty(
             b_ptr
         );
     } else if (!blocked) {
-        // TODO PRACTICE 3: Call compute_xtx_xty_blas_blocked
+        compute_xtx_xty_blas(
+            X_ptr,
+            y_ptr,
+            n_samples, n_features,
+            A_ptr,
+            b_ptr
+        );
     } else {
-        // TODO PRACTICE 4: Call compute_xtx_xty_blas_blocked
+        compute_xtx_xty_blocked(
+            X_ptr,
+            y_ptr,
+            n_samples, n_features,
+            n_threads_blocked,
+            A_ptr,
+            b_ptr
+        );
     }
 
     return py::make_tuple(A, b);
