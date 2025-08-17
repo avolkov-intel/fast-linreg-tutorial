@@ -41,10 +41,30 @@ mamba create -n linreg_env -c conda-forge python numpy scipy cython pybind11 set
 python setup.py build_ext --inplace --force
 ```
 
-4) Runtime benchmarks
+4) Set the environment variable `PRACTICE_NUM` with correct practice session number
+
+On Linux/MacOS:
+
+```
+export PRACTICE_NUM=1
+```
+
+On Windows:
+
+```
+set PRACTICE_NUM=1
+```
+
+5) Runtime benchmarks
 
 ```
 python benchmarks.py
+```
+
+6) You can also run the tests for your functions using
+
+```
+python tests.py
 ```
 
 #### Example:
