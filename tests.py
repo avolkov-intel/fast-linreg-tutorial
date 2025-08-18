@@ -4,8 +4,16 @@ from utils import generate_data, compute_xtx_xty_numpy
 import numpy as np
 from joblib import cpu_count
 
-num_physical_cores = cpu_count(only_physical_cores=True)
+import os
 
+PRACTICE_NUM = int(os.getenv("PRACTICE_NUM", 0))
+
+if (PRACTICE_NUM):
+    print(f"PRACTICE SESSION NUMBER is {PRACTICE_NUM}")
+else:
+    print("WARNING: PRACTICE_NUM environmental variable is not set")
+
+num_physical_cores = cpu_count(only_physical_cores=True)
 
 def test_one_func(func, args, A_gth, b_gth, name):
     """
@@ -19,13 +27,16 @@ def test_one_func(func, args, A_gth, b_gth, name):
 def check_all(X, y):
     # Compute ground truth using numpy
     A_gth, b_gth = compute_xtx_xty_numpy(X, y)
-
-    test_one_func(compute_xtx_xty_cython, [X, y], A_gth, b_gth, "Cython")
-    test_one_func(compute_xtx_xty_pybind, [X, y, False, False, 1], A_gth, b_gth, "Pybind")
-    test_one_func(compute_xtx_xty_cython, [X, y, True], A_gth, b_gth, "Cython with BLAS")
-    test_one_func(compute_xtx_xty_pybind, [X, y, True, False, 1], A_gth, b_gth, "Pybind with BLAS")
-    test_one_func(compute_xtx_xty_cython, [X, y, True, True, num_physical_cores], A_gth, b_gth, "Cython with BLAS (blocked)")
-    test_one_func(compute_xtx_xty_pybind, [X, y, True, True, num_physical_cores], A_gth, b_gth, "Pybind with BLAS (blocked)")
+    if (PRACTICE_NUM >= 1):
+        test_one_func(compute_xtx_xty_cython, [X, y], A_gth, b_gth, "Cython")
+    if (PRACTICE_NUM >= 2):
+        test_one_func(compute_xtx_xty_pybind, [X, y, False, False, 1], A_gth, b_gth, "Pybind")
+    if (PRACTICE_NUM >= 3):
+        test_one_func(compute_xtx_xty_cython, [X, y, True], A_gth, b_gth, "Cython with BLAS")
+        test_one_func(compute_xtx_xty_pybind, [X, y, True, False, 1], A_gth, b_gth, "Pybind with BLAS")
+    if (PRACTICE_NUM >= 4):
+        test_one_func(compute_xtx_xty_cython, [X, y, True, True, num_physical_cores], A_gth, b_gth, "Cython with BLAS (blocked)")
+        test_one_func(compute_xtx_xty_pybind, [X, y, True, True, num_physical_cores], A_gth, b_gth, "Pybind with BLAS (blocked)")
 
     print("All implementations match the ground truth.")
 
