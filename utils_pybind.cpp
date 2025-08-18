@@ -2,10 +2,28 @@
 #include <pybind11/numpy.h>
 
 
-// TODO PRACTICE 3:
+// TODO PRACTICE 3: Include the header
+// void compute_xtx_xty_blas(
+//     const double *X,
+//     const double *y,
+//     const int n, const int p,
+//     double *A,
+//     double *b
+// );
+// Function is implemented in solutions/utils_pybind_blas.hpp
 // #include "solutions/utils_pybind_blas.hpp"
 
-// TODO PRACTICE 4:
+
+// TODO PRACTICE 4: Include the header
+// void compute_xtx_xty_blocked(
+//     const double *X,
+//     const double *y,
+//     const int n, const int p,
+//     double *A,
+//     double *b,
+//     int n_threads_blocked
+// );
+// Function is implemented in solutions/utils_pybind_blas_blocked.hpp
 // #include "solutions/utils_pybind_blas_blocked.hpp"
 
 #include <vector>
@@ -69,7 +87,7 @@ py::tuple compute_xtx_xty(
             b_ptr
         );
     } else if (!blocked) {
-        // TODO PRACTICE 3: Call compute_xtx_xty_blas_blocked
+        // TODO PRACTICE 3: Call compute_xtx_xty_blas
     } else {
         // TODO PRACTICE 4: Call compute_xtx_xty_blas_blocked
     }

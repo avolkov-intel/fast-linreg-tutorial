@@ -10,12 +10,8 @@ using namespace pybind11::literals;
 
 
 /*
- Here are two implementation of XtX and Xty kernels:
-    - in first result is computed using nested loops
-    - in second result is computed using OpenBLAS library
- Attendees wouldn't be required to fill in much gaps here, code
- is provided to demonstrate what can be possibly done, not to learn
- how to code in C++.
+ Here is the implementation of XtX and Xty kernels 
+ which are computed using OpenBLAS and OpenMP.
 */
 
 bool printed_no_omp_msg = false;
@@ -23,22 +19,20 @@ void compute_xtx_xty_blocked(
     const double *X,
     const double *y,
     const int n, const int p,
-    int n_threads,
     double *A,
-    double *b
-);
+    double *b,
+    int n_threads_blocked);
 
 void compute_xtx_xty_blocked(
     const double *X,
     const double *y,
     const int n, const int p,
-    int n_threads,
     double *A,
-    double *b
-)
+    double *b,
+    int n_threads_blocked)
 {
 #ifndef _OPENMP
-    n_threads = 1;
+    n_threads_blocked = 1;
     if (!printed_no_omp_msg) {
         PyGILState_STATE gil_state = PyGILState_Ensure();
         PySys_WriteStdout("\tNote: blocked version running single-threaded (no OpenMP)\n");
@@ -50,19 +44,19 @@ void compute_xtx_xty_blocked(
     const int block_size = 256;
     const int num_blocks = n / block_size;
     const int size_remainder = n - num_blocks * block_size;
-    n_threads = std::min(n_threads, num_blocks);
+    n_threads_blocked = std::min(n_threads_blocked, num_blocks);
 
     const int dim_A = p*p;
     const int dim_b = p;
     
-    std::vector< std::unique_ptr<double[]> > A_thread_memory(n_threads);
-    std::vector< std::unique_ptr<double[]> > b_thread_memory(n_threads);
+    std::vector< std::unique_ptr<double[]> > A_thread_memory(n_threads_blocked);
+    std::vector< std::unique_ptr<double[]> > b_thread_memory(n_threads_blocked);
 
     const double one = 1.0;
     const double zero = 0.0;
     const int one_int = 1;
 
-    py::object thread_limit_ctx = (n_threads > 1)?
+    py::object thread_limit_ctx = (n_threads_blocked > 1)?
         py::module_::import("threadpoolctl").attr("threadpool_limits")("limits"_a="sequential_blas_under_openmp")
         :
         py::module_::import("contextlib").attr("nullcontext")()
@@ -70,7 +64,7 @@ void compute_xtx_xty_blocked(
     thread_limit_ctx.attr("__enter__")();
 
 #ifdef _OPENMP
-    #pragma omp parallel for schedule(static) num_threads(n_threads)
+    #pragma omp parallel for schedule(static) num_threads(n_threads_blocked)
 #endif
     for (int block_id = 0; block_id < num_blocks; block_id++)
     {
@@ -128,7 +122,7 @@ void compute_xtx_xty_blocked(
         );
     }
 
-    for (int thread_id = size_remainder? 0 : 1; thread_id < n_threads; thread_id++) {
+    for (int thread_id = size_remainder? 0 : 1; thread_id < n_threads_blocked; thread_id++) {
         daxpy_(&dim_A, &one, A_thread_memory[thread_id].get(), &one_int, A, &one_int);
         daxpy_(&dim_b, &one, b_thread_memory[thread_id].get(), &one_int, b, &one_int);
     }

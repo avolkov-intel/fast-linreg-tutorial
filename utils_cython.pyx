@@ -7,10 +7,29 @@ from libcpp cimport bool
 # We need this include to build the kernel with solution for comparison
 include "solutions/utils_cython_naive.pxi"
 
-# TODO PRACTICE 3:
+# TODO PRACTICE 3: Include the header
+# Function declaration provided for reference
+#cdef void compute_xtx_xty_blas(
+#    double *X,
+#    double *y,
+#    int n,
+#    int p,
+#    double *A,
+#    double *b,
+#) noexcept nogil
 # include "solutions/utils_cython_blas.pxi"
 
-# TODO PRACTICE 4:
+# TODO PRACTICE 4: Include the header
+# Function declaration provided for reference
+#cdef void compute_xtx_xty_blas_blocked(
+#    double *X,
+#    double *y,
+#    int n,
+#    int p,
+#    double *A,
+#    double *b,
+#    int n_threads
+#) noexcept nogil
 # include "solutions/utils_cython_blas_blocked.pxi"
 
 
@@ -37,6 +56,12 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
     # Zero-initialize
     cdef np.ndarray[np.float64_t, ndim=2] A = np.zeros((p, p), dtype=np.float64)
     cdef np.ndarray[np.float64_t, ndim=1] b = np.zeros(p, dtype=np.float64)
+
+    cdef const double* X_ptr = &X[0, 0]
+    cdef const double* y_ptr = &y[0]
+
+    cdef double* A_ptr = &A[0, 0]
+    cdef double* b_ptr = &b[0]
 
     if not use_blas:
         compute_xtx_xty_naive(X, y, n, p, A, b)

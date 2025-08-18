@@ -2,9 +2,15 @@ build
 __pycache__
 .directory
 .DS_Store
+.vscode
 utils_cython.cpp
+solutions/utils_cython_blas.cpp
+solutions/utils_cython_blas_blocked.cpp
+solutions/utils_cython_naive.cpp
+utils_cython.c
 *.so
 *.dll
 *.dylib
 *.pyd
 *.html
+*.workspace

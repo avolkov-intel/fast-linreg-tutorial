@@ -84,9 +84,9 @@ py::tuple compute_xtx_xty(
             X_ptr,
             y_ptr,
             n_samples, n_features,
-            n_threads_blocked,
             A_ptr,
-            b_ptr
+            b_ptr,
+            n_threads_blocked
         );
     }
 

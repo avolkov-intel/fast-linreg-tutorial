@@ -38,7 +38,7 @@ cdef bool printed_no_omp_msg = False
 Multithreaded implementation with multiple calls for BLAS
 """
 
-cdef void compute_xtx_xty_blas_blocked(
+cdef int compute_xtx_xty_blas_blocked(
     double *X,
     double *y,
     int n,
@@ -137,3 +137,5 @@ cdef void compute_xtx_xty_blas_blocked(
         daxpy(&dim_b, &one, b_thread_memory[thread_id].data(), &one_int, b, &one_int)
 
     symmetrize_matrix(A, p)
+
+    return 0
