@@ -14,6 +14,7 @@ import sys
 # For simplicity, this skips linkage to OpenMP on platforms other than windows and linux
 # (i.e. will not use OpenMP on macOS). Note that compiling on windows with the mingw
 # compiler requires changing the argument from '/openmp' to '-fopenmp'.
+# Docs: https://scikit-learn.org/stable/developers/advanced_installation.html#platform-specific-instructions
 args_openmp = []
 if sys.platform == "linux":
     args_openmp = ["-fopenmp"]

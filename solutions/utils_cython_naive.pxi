@@ -58,4 +58,3 @@ def compute_xtx_xty_naive_solution(np.ndarray[np.float64_t, ndim=2] X,
 
     compute_xtx_xty_naive_solution_impl(X, y, n, p, A, b)
     return A, b
-    

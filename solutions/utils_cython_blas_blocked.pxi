@@ -45,7 +45,7 @@ cdef int compute_xtx_xty_blas_blocked(
     int p,
     double *A,
     double *b,
-    int n_threads
+    int n_threads_blocked
 ) except + nogil:
     global printed_no_omp_msg
     cdef double one = 1.0
@@ -57,10 +57,10 @@ cdef int compute_xtx_xty_blas_blocked(
     cdef int block_size = 256
     cdef int num_blocks = <int>(n / block_size)
     cdef int size_remainder = n - num_blocks * block_size
-    if num_blocks < n_threads:
-        n_threads = num_blocks
+    if num_blocks < n_threads_blocked:
+        n_threads_blocked = num_blocks
     if not check_has_openmp():
-        n_threads = 1
+        n_threads_blocked = 1
         if not printed_no_omp_msg:
             printed_no_omp_msg = True
             with gil:
@@ -73,19 +73,19 @@ cdef int compute_xtx_xty_blas_blocked(
     # the thread that uses them, in order to preserve numa locality.
     cdef vector[ vector[double] ] A_thread_memory
     cdef vector[ vector[double] ] b_thread_memory
-    A_thread_memory.resize(n_threads)
-    b_thread_memory.resize(n_threads)
+    A_thread_memory.resize(n_threads_blocked)
+    b_thread_memory.resize(n_threads_blocked)
 
     cdef int block_id
 
     with gil:
         blas_lim_ctx = (
             threadpool_limits(limits="sequential_blas_under_openmp")
-            if n_threads > 1 else
+            if n_threads_blocked > 1 else
             nullcontext()
         )
         with blas_lim_ctx:
-            for block_id in prange(num_blocks, nogil=True, schedule="static", num_threads=n_threads):
+            for block_id in prange(num_blocks, nogil=True, schedule="static", num_threads=n_threads_blocked):
 
                 if A_thread_memory[threadid()].empty():
                     A_thread_memory[threadid()].resize(dim_A)
@@ -132,7 +132,7 @@ cdef int compute_xtx_xty_blas_blocked(
 
     cdef int thread_id
     cdef int thread_id_start = 0 if size_remainder else 1
-    for thread_id in range(thread_id_start, n_threads):
+    for thread_id in range(thread_id_start, n_threads_blocked):
         daxpy(&dim_A, &one, A_thread_memory[thread_id].data(), &one_int, A, &one_int)
         daxpy(&dim_b, &one, b_thread_memory[thread_id].data(), &one_int, b, &one_int)
 

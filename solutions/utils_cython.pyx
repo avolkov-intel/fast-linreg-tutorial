@@ -17,7 +17,7 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                     np.ndarray[np.float64_t, ndim=1] y,
                     bool use_blas=False,
                     bool blocked=False,
-                    int n_threads=1):
+                    int n_threads_blocked=1):
 
     cdef int n = X.shape[0]
     cdef int p = X.shape[1]
@@ -47,7 +47,7 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                     p,
                     &A[0, 0],
                     &b[0],
-                    n_threads,
+                    n_threads_blocked,
                 )
 
     return A, b

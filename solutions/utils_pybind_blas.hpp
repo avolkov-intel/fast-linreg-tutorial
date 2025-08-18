@@ -83,5 +83,4 @@ void compute_xtx_xty_blas(
     // Since only the upper part is filled by dsyrk, we copy it to the lower part manually
     symmetrize_matrix(A, p);
 }
-
 #endif

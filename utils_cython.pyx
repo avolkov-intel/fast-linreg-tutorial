@@ -28,7 +28,7 @@ include "solutions/utils_cython_naive.pxi"
 #    int p,
 #    double *A,
 #    double *b,
-#    int n_threads
+#    int n_threads_blocked
 #) noexcept nogil
 # include "solutions/utils_cython_blas_blocked.pxi"
 
