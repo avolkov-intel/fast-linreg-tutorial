@@ -42,7 +42,7 @@ Cython and C++ within their Python libraries.
 2) Create an environment with Python, compiler toolchain, and PyData stack:
 
 ```shell
-mamba create -n linreg_env -c conda-forge python numpy scipy cython pybind11 setuptools scikit-learn threadpoolctl cxx-compiler
+conda create -n linreg_env -c conda-forge python numpy scipy cython pybind11 setuptools scikit-learn threadpoolctl cxx-compiler
 
 ```
 
@@ -87,3 +87,4 @@ python tests.py
 #### Example:
 
 ![alt text](example_output.png)
+
