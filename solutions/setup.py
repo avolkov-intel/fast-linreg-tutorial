@@ -24,7 +24,7 @@ elif sys.platform == "win32":
 # === 1. Pybind11 Extension ===
 pybind11_ext = Extension(
     "utils_pybind",
-    ["utils_pybind.cpp"],
+    ["solutions/utils_pybind.cpp"],
     include_dirs=[
         pybind11.get_include(),
         numpy.get_include(),
@@ -39,7 +39,7 @@ pybind11_ext = Extension(
 cython_exts = cythonize([
     Extension(
         "utils_cython",
-        ["utils_cython.pyx"],
+        ["solutions/utils_cython.pyx"],
         include_dirs=[
             numpy.get_include()
         ],

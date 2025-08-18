@@ -49,7 +49,7 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
                     np.ndarray[np.float64_t, ndim=1] y,
                     bool use_blas=False,
                     bool blocked=False,
-                    int n_threads=1):
+                    int n_threads_blocked=1):
     cdef int n = X.shape[0]
     cdef int p = X.shape[1]
 
@@ -57,8 +57,10 @@ def compute_xtx_xty(np.ndarray[np.float64_t, ndim=2] X,
     cdef np.ndarray[np.float64_t, ndim=2] A = np.zeros((p, p), dtype=np.float64)
     cdef np.ndarray[np.float64_t, ndim=1] b = np.zeros(p, dtype=np.float64)
 
-    cdef const double* X_ptr = &X[0, 0]
-    cdef const double* y_ptr = &y[0]
+    # Note: data 'X' and 'y' are not modified, but Cython BLAS does not
+    # declare these Fortran-type functions to have 'const' qualifier
+    cdef double* X_ptr = &X[0, 0]
+    cdef double* y_ptr = &y[0]
 
     cdef double* A_ptr = &A[0, 0]
     cdef double* b_ptr = &b[0]
