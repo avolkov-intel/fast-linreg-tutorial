@@ -13,6 +13,10 @@ Cython and C++ within their Python libraries.
 - `setup.py` - script used to build the modules
 - `solutions/` - folder containing solutions to tutorial and implementations of helper functions. Files there should not be modified and should be used for reference only. **Please don't look to solutions before the end of respective practice session not to spoil the fun!**
 
+### Slides
+
+[Link to slides](https://drive.google.com/file/d/1HVuoC2fWIDjcU7V1G7Kw7mGnn1GGIsn6/view?usp=sharing)
+
 ### Setup Instructions
 
 1) Install conda/mamba through the [miniforge installer](https://github.com/conda-forge/miniforge):
@@ -87,4 +91,5 @@ python tests.py
 #### Example:
 
 ![alt text](example_output.png)
+
 
