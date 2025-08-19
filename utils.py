@@ -27,7 +27,7 @@ def benchmark(func, args, n_iter=10):
 
 def compute_xtx_xty_baseline(X, y):
     """
-    Implementation of XtX, Xty kernels with nested loops, attendees will be asked to implement it.
+    Implementation of XtX, Xty kernels with nested loops
     """
     A = np.zeros((X.shape[1], X.shape[1]), dtype=X.dtype)
     b = np.zeros((X.shape[1],), dtype=X.dtype)
@@ -40,7 +40,7 @@ def compute_xtx_xty_baseline(X, y):
 
 def compute_xtx_xty_numpy(X, y):
     """
-    Implementation of XtX, Xty kernels using numpy, attendees will be asked to implement it.
+    Implementation of XtX, Xty kernels using numpy
     """
     A = X.T @ X
     b = X.T @ y
@@ -56,8 +56,7 @@ def linear_regression_gth(X, y):
 
 def linear_regression(compute_xtx_xty, *args):
     """
-    Training the own implementation of Linear Regression using XtX, Xty kernels and solver from scipy.
-    Attendees will be asked to implement it.
+    Training the own implementation of Linear Regression using XtX, Xty kernels and solver from scipy
     """
     A, b = compute_xtx_xty(*args)
     coefs = np.linalg.solve(A, b)
